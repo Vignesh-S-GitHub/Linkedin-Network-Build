@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Network Builder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo-img">
+                <h1>Network Builder</h1>
+            </div>
+            <div class="status-badge" id="status-badge">Ready</div>
+        </header>
+
+        <main>
+            <div class="card config-card">
+                <h2>Configuration</h2>
+                <form id="bot-form">
+                    <div class="form-group">
+                        <label for="company">Target Company</label>
+                        <input type="text" id="company" placeholder="e.g. Meta, Apple, Amazon, Netflix, Google"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="role">Target Role</label>
+                        <input type="text" id="role"
+                            placeholder="e.g. Software Engineer, Data Engineer, Software Tester" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="limit">Connection Limit</label>
+                        <input type="number" id="limit" value="10" min="1" max="50">
+                        <small>Recommended: &lt; 20 per day</small>
+                    </div>
+
+                    <div class="actions">
+                        <button type="submit" class="btn-primary" id="start-btn">Start Automation</button>
+                        <button type="button" class="btn-danger" id="stop-btn" disabled>Stop</button>
+                        <button type="button" class="btn-warning" id="reset-btn"
+                            title="Force kill Chrome if stuck">Force Reset</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card logs-card">
+                <div class="logs-header">
+                    <h2>Live Activity</h2>
+                    <span class="clear-logs" onclick="clearLogs()">Clear</span>
+                </div>
+                <div class="logs-container" id="logs-container">
+                    <div class="log-entry info">
+                        <span class="time">--:--</span>
+                        <span class="msg">System ready. Waiting for input...</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
