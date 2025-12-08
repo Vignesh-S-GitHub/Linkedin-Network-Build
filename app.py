@@ -31,11 +31,17 @@ def start_bot():
     data = request.json
     company = data.get('company')
     role = data.get('role')
-    limit = int(data.get('limit', 10))
+    
+    try:
+        limit = int(data.get('limit', 10))
+        if limit < 1 or limit > 50:
+            return jsonify({"status": "error", "message": "Limit must be between 1 and 50."})
+    except ValueError:
+        return jsonify({"status": "error", "message": "Invalid limit value."})
     
     # Clear previous logs
     logs.clear()
-    add_log("Starting bot process...", "info")
+    add_log(f"Starting bot for {company} - {role} ({limit} limit)...", "info")
 
     def run():
         bot.start_automation(company, role, limit, callback=add_log)
@@ -43,7 +49,7 @@ def start_bot():
     bot_thread = threading.Thread(target=run)
     bot_thread.start()
     
-    return jsonify({"status": "success", "message": "Bot started successfully."})
+    return jsonify({"status": "success", "message": "Bot process started."})
 
 @app.route('/stop', methods=['POST'])
 def stop_bot():

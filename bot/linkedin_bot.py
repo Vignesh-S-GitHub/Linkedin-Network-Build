@@ -4,14 +4,13 @@ import urllib.parse
 import os
 import logging
 import shutil
+import json
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import SessionNotCreatedException, WebDriverException
-
-import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -26,7 +25,17 @@ class LinkedInBot:
         self.driver = None
         self.user_data_dir = os.path.abspath(user_data_dir)
         self.is_running = False
-        self.state_file = state_file
+        self.state_file = os.path.abspath(state_file)
+        
+        self._ensure_user_data_dir()
+
+    def _ensure_user_data_dir(self):
+        """Ensures the Chrome user data directory exists."""
+        if not os.path.exists(self.user_data_dir):
+            try:
+                os.makedirs(self.user_data_dir)
+            except Exception as e:
+                logger.error(f"Failed to create user data dir: {e}")
 
     def _load_state(self):
         """Loads the bot state from a JSON file."""
@@ -39,10 +48,12 @@ class LinkedInBot:
         return {}
 
     def _save_state(self, state):
-        """Saves the bot state to a JSON file."""
+        """Saves the bot state to a JSON file safely."""
         try:
             with open(self.state_file, 'w') as f:
                 json.dump(state, f, indent=4)
+        except PermissionError:
+            logger.warning("Could not save state: Permission denied (file might be in use).")
         except Exception as e:
             logger.error(f"Failed to save state: {e}")
 
@@ -55,14 +66,12 @@ class LinkedInBot:
         options.add_experimental_option("useAutomationExtension", False)
         options.add_argument(f"user-data-dir={self.user_data_dir}")
         
-        # Attempt to create driver with retries
         for attempt in range(3):
             try:
                 service = Service(ChromeDriverManager().install())
                 return webdriver.Chrome(service=service, options=options)
-            except SessionNotCreatedException as e:
+            except SessionNotCreatedException:
                 logger.warning(f"Session creation failed (Attempt {attempt+1}/3). Chrome might be already running.")
-                # Try to kill stray chrome processes if possible (Windows only)
                 if os.name == 'nt':
                     try:
                         os.system("taskkill /f /im chrome.exe")
@@ -75,7 +84,7 @@ class LinkedInBot:
         
         raise WebDriverException("Failed to start Chrome after 3 attempts. Please close all Chrome windows.")
 
-    def _random_sleep(self, min_seconds=2, max_seconds=5):
+    def human_delay(self, min_seconds=2, max_seconds=5):
         """Sleeps for a random interval to mimic human interaction."""
         time.sleep(random.uniform(min_seconds, max_seconds))
 
@@ -103,6 +112,7 @@ class LinkedInBot:
         
         def log(msg, type="info"):
             logger.info(msg)
+            print(f"[{type.upper()}] {msg}")
             if callback:
                 callback(msg, type)
 
@@ -114,7 +124,6 @@ class LinkedInBot:
         try:
             log("Initializing browser...", "info")
             
-            # Ensure previous session is closed
             if self.driver:
                 self.stop()
                 
@@ -123,11 +132,10 @@ class LinkedInBot:
             # Login Check
             log("Checking login status...", "info")
             self.driver.get("https://www.linkedin.com/feed/")
-            self._random_sleep(3, 5)
+            self.human_delay(3, 5)
             
             if "feed" not in self.driver.current_url:
                 log("Please log in manually in the browser window.", "warning")
-                # Wait for user to login
                 max_wait = 300 
                 start_wait = time.time()
                 while "feed" not in self.driver.current_url:
@@ -147,7 +155,7 @@ class LinkedInBot:
             # Search Execution
             search_url = self._generate_search_url(role, company, page=current_page)
             self.driver.get(search_url)
-            self._random_sleep(3, 5)
+            self.human_delay(3, 5)
             
             total_sent = 0
             while total_sent < limit and self.is_running:
@@ -159,7 +167,7 @@ class LinkedInBot:
                 
                 if not buttons:
                     log("No connectable profiles found on this page. Checking next page...", "warning")
-                    # Fall through to pagination to go to next page
+                
                 else:
                     for button in buttons:
                         if not self.is_running or total_sent >= limit:
@@ -167,13 +175,13 @@ class LinkedInBot:
                             
                         try:
                             self.driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", button)
-                            self._random_sleep(1, 2)
+                            self.human_delay(1, 2)
                             
                             if "Connect" not in button.text:
                                 continue
                                 
                             button.click()
-                            self._random_sleep(1, 2)
+                            self.human_delay(1, 2)
                             
                             # Handle "Send without note" Modal
                             try:
@@ -181,7 +189,7 @@ class LinkedInBot:
                                 send_now.click()
                                 total_sent += 1
                                 log(f"Connection sent ({total_sent}/{limit})", "success")
-                                self._random_sleep(3, 6)
+                                self.human_delay(3, 6)
                             except:
                                 # Fallback: Try generic "Send" button
                                 try:
@@ -189,7 +197,7 @@ class LinkedInBot:
                                     send_btn.click()
                                     total_sent += 1
                                     log(f"Connection sent ({total_sent}/{limit})", "success")
-                                    self._random_sleep(3, 6)
+                                    self.human_delay(3, 6)
                                 except:
                                     log("Could not send request. Closing modal.", "warning")
                                     try:
@@ -202,7 +210,7 @@ class LinkedInBot:
                                 if got_it_btn:
                                     log("Dismissing 'Growing your network' popup...", "info")
                                     got_it_btn[0].click()
-                                    self._random_sleep(1, 2)
+                                    self.human_delay(1, 2)
                             except:
                                 pass
                                     
@@ -211,20 +219,14 @@ class LinkedInBot:
                 
                 # Check for limit reached before paging
                 if total_sent >= limit:
-                    # Update state to the *current* page if we did work on it? 
-                    # Actually, if we stopped mid-page, we might want to resume ON this page or next.
-                    # Simpler strategy: If we are stopping, next time we can start on this page again.
-                    # Or better: If we finished satisfying the limit, we stay on this page.
+                    state[state_key] = current_page
+                    self._save_state(state)
+                    log(f"Limit reached. Progress saved at page {current_page}.", "info")
                     break
                     
                 # Pagination
                 try:
-                    # Before moving to next page, save that we COMPLETED this page (or at least attempted it)
-                    # Ideally, we want to save page N+1 as the start point for next time 
-                    # ONLY if we successfully click next.
-                    
                     next_btn = self.driver.find_element(By.XPATH, "//button[@aria-label='Next']")
-                    # Check if disabled
                     if not next_btn.is_enabled():
                         log("Next button is disabled. No more pages.", "info")
                         break
@@ -238,9 +240,8 @@ class LinkedInBot:
                     self._save_state(state)
                     
                     log(f"Navigating to page {current_page}...", "info")
-                    self._random_sleep(4, 6)
+                    self.human_delay(4, 6)
                 except Exception as e:
-                    # log(f"Pagination error: {str(e)}", "debug") # Debug log
                     log("No next page found or end of list.", "info")
                     break
             

@@ -1,4 +1,8 @@
-chrome_data/
 __pycache__/
 *.pyc
+chrome_data/
+bot_state.json
 .env
+venv/
+env/
+.DS_Store
