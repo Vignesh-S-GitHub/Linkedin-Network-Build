@@ -1,48 +1,75 @@
 <div align="center">
 
-# LinkedIn Network Builder
-### A local dashboard for managing connection-request workflows
+<img src="static/logo.png" alt="LinkedIn Network Builder logo" width="96" />
 
-**Flask · Selenium · local browser session · human-controlled limits**
+# LinkedIn Network Builder
+
+**A local dashboard for company- and role-based connection workflows.**
+
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-222222?style=flat-square&logo=flask&logoColor=white)
+![Selenium](https://img.shields.io/badge/Selenium-43B02A?style=flat-square&logo=selenium&logoColor=white)
+
+[Quick start](#quick-start) · [Workflow](#workflow) · [Project status](#project-status)
 
 </div>
 
-A small local web app for organizing a focused networking workflow by company and role. It opens a Chrome session for you to sign in manually, then helps process connection actions under the limits you set.
+---
 
-> Use this project cautiously and follow LinkedIn’s current terms and platform limits. Keep requests modest, review each action, and stop if LinkedIn displays a restriction or warning. This tool is intended for local, personal experimentation; it is not an official LinkedIn product.
+A Flask dashboard controlling a local Selenium/Chrome session. Enter a company, role, and request limit, sign in manually, and follow progress in the dashboard logs. This is an independent experiment, not an official LinkedIn application.
 
-## What it includes
+<a id="workflow"></a>
 
-- A dark dashboard for setting a target company, role, and request limit
-- A local Chrome session with manual sign-in
-- Selenium-based browser interaction and persistent local session data
-- A force-reset control for recovering a stuck local Chrome session
+## ✨ Workflow
 
-## Run locally
+| Step | Behavior |
+|---|---|
+| Configure | Enter company, role, and a request count; the API accepts 1–50 |
+| Sign in | Complete sign-in yourself in the local Chrome window |
+| Process | The Selenium workflow searches and attempts connection actions |
+| Monitor | Read dashboard logs and use Stop when needed |
 
-### Requirements
+The configured request count is an application limit, not a guarantee of platform permission or a platform-approved daily allowance. Review LinkedIn's applicable terms and any account restrictions before use.
 
-- Python and the dependencies listed in `requirements.txt`
-- Google Chrome
+<a id="quick-start"></a>
 
-### Setup
+## 🚀 Quick start
+
+Requires Python, Google Chrome, and a local graphical desktop. Install dependencies from [requirements.txt](requirements.txt):
 
 ```bash
 git clone https://github.com/Vignesh-S-GitHub/Linkedin-Network-Build.git
 cd Linkedin-Network-Build
-pip install -r requirements.txt
+python -m venv .venv
+# macOS / Linux; Windows: .venv\Scripts\activate
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 python app.py
 ```
 
-Open [http://localhost:5000](http://localhost:5000), choose a conservative request limit, and sign in manually when the Chrome window opens. Run only on your own computer; do not deploy it to a cloud host or CI runner.
+Open **http://localhost:5000**. Keep the server and browser window on your own computer. This application does not implement account authentication for its dashboard.
 
-## Project structure
+## 📁 Repository guide
 
-- `app.py` — Flask server and dashboard routes
-- `bot/` — Selenium workflow
-- `templates/` — dashboard HTML
-- `static/` — styles and browser-side behavior
+| Path | Purpose |
+|---|---|
+| [app.py](app.py) | Start/stop/reset routes and in-memory logs |
+| [bot/linkedin_bot.py](bot/linkedin_bot.py) | Browser session and connection workflow |
+| [templates/index.html](templates/index.html) | Dashboard controls |
+| [static/](static/) | Existing logo, styling, and client behavior |
 
----
+<a id="project-status"></a>
 
-<p align="center"><sub>Local workflow assistance with platform rules and user judgment kept in view.</sub></p>
+## 🧩 Project status
+
+The repository contains the local automation implementation but no automated tests. Browser selectors and site behavior can change. Persistent Chrome session data remains local to the machine.
+
+The Reset handler currently references `os` without importing it in `app.py`, so that action can fail. Its intended Windows behavior also terminates Chrome processes; use Stop for the ordinary workflow.
+
+## 🤝 Contributing
+
+Open an issue with a reproducible example or submit a focused pull request. Keep setup instructions and documentation aligned with any behavior changes.
+
+## 📄 License
+
+No repository-level `LICENSE` file is currently included.
